@@ -1,0 +1,66 @@
+argo-cd:
+  crds:
+    install: true
+    keep: true
+
+  controller:
+    replicas: 1
+    args:
+      appResyncPeriod: "30"
+      statusProcessors: "20"
+      operationProcessors: "10"
+      selfHealTimeout: "3"
+      repoServerTimeoutSeconds: "60"
+
+  server:
+    extraArgs:
+      - --insecure
+    replicas: 1
+    ingress:
+      enabled: true
+      annotations:
+        kubernetes.io/ingress.class: "nginx"
+        cert-manager.io/cluster-issuer: letsencrypt-prod-argocd
+        kubernetes.io/tls-acme: "true"
+        nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+      hosts:
+        - argocd.vuihoctech.com
+      paths:
+        - /
+      tls:
+        - secretName: argocd5-tls-certificate
+          hosts:
+            - argocd.test.com
+
+    configEnabled: true
+    config:
+      url: https://argocd.test.com
+      exec.enabled: "true"
+      accounts.user: apiKey, login
+      repositories: |
+        - name: main-repo
+          type: git
+          url: https://github.com/PhamNgocTuan2000/K8s-version1.git
+          usernameSecret:
+            name: git-creds
+            key: username
+          passwordSecret:
+            name: git-creds
+            key: password
+        # - name: acr-charts
+        #   type: helm
+        #   enableOci: true
+        #   username: argocd-gitlab
+        #   password: x5dtUqgitoBZQ75qicP5
+
+    rbacConfig:
+      policy.csv: |
+        p, role:dev, applications, sync, */*, allow
+        p, role:dev, applications, get, */*, allow
+        p, role:dev, certificates, get, *, allow
+        p, role:dev, clusters, get, *, allow
+        p, role:dev, repositories, get, *, allow
+        p, role:dev, projects, get, *, allow
+        p, role:dev, accounts, get, *, allow
+        p, role:dev, gpgkeys, get, */*, allow
+        g, user, role:dev
